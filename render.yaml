@@ -1,0 +1,19 @@
+# Render service spec (placeholders must be updated with your repo URL/branch)
+# See https://render.com/docs/render-yaml for more info
+services:
+  - type: worker
+    name: rss-fetcher
+    env: docker
+    repo: https://github.com/your-org/your-repo   # <- replace with your repo URL
+    branch: main                                 # <- replace if using a different branch
+    plan: free
+    dockerfilePath: Dockerfile
+    autoDeploy: true
+    # Optionally add environment variables here
+    # envVars:
+    #   - key: EXAMPLE_ENV
+    #     value: "value"
+
+# Notes:
+# - This defines a worker service that will run the Docker image built from your repo.
+# - Replace repo/branch placeholders before applying in Render, or create the service via Render UI and select "Dockerfile".
