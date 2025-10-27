@@ -1,11 +1,11 @@
-# Render service spec (placeholders must be updated with your repo URL/branch)
+# Render service spec (configured for Beo-Alvaro/rss-data)
 # See https://render.com/docs/render-yaml for more info
 services:
   - type: worker
     name: rss-fetcher
     env: docker
-    repo: https://github.com/your-org/your-repo   # <- replace with your repo URL
-    branch: main                                 # <- replace if using a different branch
+    repo: https://github.com/Beo-Alvaro/rss-data
+    branch: master
     plan: free
     dockerfilePath: Dockerfile
     autoDeploy: true
