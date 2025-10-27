@@ -100,42 +100,184 @@ If you'd like, I can now:
 - Add cleaning of `summary` to remove cookie-banner noise.
 - Add a short README example showing exact PowerShell commands and a sample prompt file.
 
-Deploying to Render (quick start)
---------------------------------
+Deploying to Fly.io (recommended - FREE 24/7)
+---------------------------------------------
 
-I added a `Dockerfile` and a `render.yaml` template so you can deploy the fetcher as a worker on Render.
+I added a `Dockerfile` and `fly.toml` so you can deploy the fetcher to Fly.io's free tier (includes persistent storage and always-on).
 
-Important notes before you deploy:
-- The container runs the fetcher as a long-running worker (no web port required).
-- Render instances have an ephemeral filesystem by default. If you need to preserve `data/rss_items.db` across deploys or restarts, you must either attach a Render Disk to the service or store the data externally (managed DB or object storage). See "persistence" below.
+### Prerequisites
+1. Install Fly.io CLI (flyctl)
+2. Create a free Fly.io account
+3. Authenticate flyctl
 
-Steps (recommended, via the Render dashboard):
+### Step-by-step deployment:
 
-1. Commit and push the repo (including the new `Dockerfile` and `render.yaml`) to GitHub.
-2. On Render, create a new service -> "Connect a repository" -> choose the repo and branch.
-3. When selecting the service type, choose "Docker" and set it up as a "Worker" service. If you use the `render.yaml` file, Render can import the spec automatically.
-4. Enable automatic deploys on push (Render will build the Dockerfile and start the worker).
-
-Local test (build & run the container locally):
+#### 1. Install flyctl (if not already installed)
 
 ```powershell
-# build the image
+# Using PowerShell (run as Administrator)
+iwr https://fly.io/install.ps1 -useb | iex
+```
+
+After installation, **close and reopen** your terminal, then verify:
+
+```powershell
+flyctl version
+```
+
+#### 2. Authenticate with Fly.io
+
+```powershell
+flyctl auth login
+```
+
+This will open a browser window — sign up or log in (GitHub auth is easiest).
+
+#### 3. Launch the app
+
+```powershell
+# This will create the app and prompt for configuration
+flyctl launch --no-deploy
+```
+
+When prompted:
+- **App name:** Press Enter to use `rss-fetcher-data` (or choose your own)
+- **Region:** Choose closest to you (e.g., `sin` for Singapore, `lax` for LA, `fra` for Frankfurt)
+- **Would you like to set up a Postgresql database?** → **No**
+- **Would you like to set up an Upstash Redis database?** → **No**
+- **Would you like to deploy now?** → **No** (we'll create volume first)
+
+#### 4. Create persistent volume for data storage
+
+```powershell
+# Create a 1GB volume (free tier allows up to 3GB total)
+flyctl volumes create rss_data --size 1 --region sin
+```
+
+**Important:** Use the same region you selected in step 3!
+
+#### 5. Deploy the app
+
+```powershell
+flyctl deploy
+```
+
+This will:
+- Build the Docker image
+- Push to Fly.io registry
+- Deploy and start the worker
+- Mount the volume at `/app/data`
+
+#### 6. Verify it's running
+
+```powershell
+# Check app status
+flyctl status
+
+# View logs (should show fetching activity)
+flyctl logs
+```
+
+You should see logs like:
+```
+INFO Starting fetcher: url=https://data.gmanetwork.com/gno/rss/news/regions/feed.xml
+INFO Fetched 15 items, inserted 15 new.
+INFO Updated JSON snapshot, 15 rows
+```
+
+#### 7. Check the data (optional)
+
+```powershell
+# SSH into the running container
+flyctl ssh console
+
+# Inside container, check the files:
+ls -lh /app/data/
+cat /app/data/rss_items.jsonl | head -n 2
+exit
+```
+
+### Managing your app
+
+```powershell
+# View logs in real-time
+flyctl logs -f
+
+# Restart the app
+flyctl apps restart
+
+# Scale to 0 (stop) or 1 (start)
+flyctl scale count 0  # stop
+flyctl scale count 1  # start
+
+# Check resource usage
+flyctl status
+
+# Destroy app (if you want to remove it)
+flyctl apps destroy rss-fetcher-data
+```
+
+### Important Notes
+
+**Free tier limits (as of 2025):**
+- 3 shared-cpu VMs (256MB RAM each)
+- 3GB persistent volume storage (total across all apps)
+- 160GB outbound transfer/month
+- **Perfect for this RSS fetcher!**
+
+**Data persistence:**
+- The volume (`rss_data`) persists across deploys and restarts
+- `data/rss_items.db` and `data/rss_items.jsonl` are preserved
+
+**Updating the app:**
+- Make code changes locally
+- Run `flyctl deploy` to rebuild and redeploy
+- Data in the volume is preserved
+
+### Troubleshooting
+
+**If deployment fails:**
+```powershell
+# Check detailed logs
+flyctl logs
+
+# Check app status
+flyctl status
+
+# View machine details
+flyctl machines list
+```
+
+**If you need to recreate volume:**
+```powershell
+# List volumes
+flyctl volumes list
+
+# Delete volume (WARNING: destroys data)
+flyctl volumes delete <volume-id>
+
+# Create new volume
+flyctl volumes create rss_data --size 1 --region sin
+```
+
+### Local Testing (already done earlier)
+
+```powershell
+# Build the image
 docker build -t rss-fetcher:local .
 
-# run the container (mount ./data so you can inspect DB output locally)
+# Run the container (mount ./data so you can inspect DB output locally)
 docker run --rm -v ${PWD}/data:/app/data rss-fetcher:local
 ```
 
-Persistence options
-- Use Render Disks (attach a disk to the service) — this keeps files across deploys and restarts.
-- Use an external persistence layer: push data to a managed database or object store (e.g., managed Postgres, Cloud SQL, S3/GCS). I can add support for a remote DB if you prefer.
+### Next Steps
 
-Environment variables and secrets
-- If you need API keys or other secrets, add them in the Render dashboard under the service settings (they're exposed as environment variables inside the container). No secrets are required by default.
+Once deployed, your fetcher will:
+- Run 24/7 on Fly.io's free tier
+- Poll the RSS feed every 5 minutes
+- Store data in persistent volume
+- Auto-restart if it crashes
 
-Next steps I can do for you
-- Fill in `render.yaml` with your repo URL and branch.
-- Add Render Disk support or switch to a managed DB for persistence.
-- Add an optional GitHub Actions workflow that notifies Render (or calls Render's API) if you prefer CI-triggered deploys rather than Render's GitHub integration.
-
-If you want, I can now fill in the `render.yaml` with your GitHub repo URL and finish wiring a simple GitHub Actions deploy step — tell me your repo URL (or allow me to keep placeholders and provide step-by-step instructions).
+**Need help?**
+- Fly.io docs: https://fly.io/docs/
+- Check your dashboard: https://fly.io/dashboard
