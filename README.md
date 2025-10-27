@@ -100,10 +100,62 @@ If you'd like, I can now:
 - Add cleaning of `summary` to remove cookie-banner noise.
 - Add a short README example showing exact PowerShell commands and a sample prompt file.
 
-Deploying to Fly.io (recommended - FREE 24/7)
----------------------------------------------
+Automated Fetching with GitHub Actions (FREE - No Card Required!)
+-------------------------------------------------------------------
 
-I added a `Dockerfile` and `fly.toml` so you can deploy the fetcher to Fly.io's free tier (includes persistent storage and always-on).
+✅ **Currently Active** - The fetcher runs automatically every 5 minutes using GitHub Actions!
+
+### How it works:
+- GitHub Actions runs `scripts/rss_fetcher.py` on a schedule (every 5 minutes)
+- New RSS items are stored in `data/rss_items.db` and `data/rss_items.jsonl`
+- Changes are automatically committed back to the repo
+- No servers, no credit cards, completely free!
+
+### What's included:
+- **Workflow file:** `.github/workflows/fetch-rss.yml`
+- **Schedule:** Every 5 minutes (configurable)
+- **Storage:** Data files committed to the repository
+- **Logs:** View in GitHub Actions tab
+
+### View the workflow:
+1. Go to your repo: https://github.com/Beo-Alvaro/rss-data
+2. Click **"Actions"** tab
+3. See runs under **"Fetch RSS Feed"**
+
+### Manual trigger:
+If you want to run it immediately:
+1. Go to **Actions** → **Fetch RSS Feed**
+2. Click **"Run workflow"** → **"Run workflow"**
+
+### Customize the schedule:
+Edit `.github/workflows/fetch-rss.yml` and change the cron expression:
+```yaml
+schedule:
+  - cron: '*/5 * * * *'  # Every 5 minutes
+  # - cron: '*/10 * * * *'  # Every 10 minutes
+  # - cron: '0 * * * *'     # Every hour
+  # - cron: '0 */6 * * *'   # Every 6 hours
+```
+
+### GitHub Actions limits (Free tier):
+- ✅ 2,000 minutes/month (plenty for this use case)
+- ✅ Each run takes ~1 minute
+- ✅ Running every 5 minutes = ~8,640 runs/month = ~144 minutes/month
+- ✅ You'll use less than 10% of your free quota!
+
+### Access the data:
+The fetched data is committed to your repo automatically:
+- **Database:** `data/rss_items.db`
+- **JSONL:** `data/rss_items.jsonl`
+
+You can clone/pull the repo anytime to access the latest data locally.
+
+---
+
+Deploying to Fly.io (alternative - requires credit card)
+--------------------------------------------------------
+
+I added a `Dockerfile` and `fly.toml` if you prefer to deploy to Fly.io's free tier (requires credit card verification but free to use within limits).
 
 ### Prerequisites
 1. Install Fly.io CLI (flyctl)
