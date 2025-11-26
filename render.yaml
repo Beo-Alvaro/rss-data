@@ -1,0 +1,19 @@
+# Render service spec (configured for Beo-Alvaro/rss-data)
+# See https://render.com/docs/render-yaml for more info
+services:
+  - type: worker
+    name: rss-fetcher
+    env: docker
+    repo: https://github.com/Beo-Alvaro/rss-data
+    branch: master
+    plan: free
+    dockerfilePath: Dockerfile
+    autoDeploy: true
+    # Optionally add environment variables here
+    # envVars:
+    #   - key: EXAMPLE_ENV
+    #     value: "value"
+
+# Notes:
+# - This defines a worker service that will run the Docker image built from your repo.
+# - Replace repo/branch placeholders before applying in Render, or create the service via Render UI and select "Dockerfile".

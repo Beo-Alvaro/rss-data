@@ -1,0 +1,31 @@
+# Fly.io configuration for RSS fetcher
+# See https://fly.io/docs/reference/configuration/ for full reference
+
+app = "rss-fetcher-data"  # Change this to a unique name if needed
+primary_region = "sin"     # Singapore region (change to 'lax', 'fra', 'ord', etc. if preferred)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PYTHONUNBUFFERED = "1"
+
+# Mount persistent volume for database and JSONL storage
+[mounts]
+  source = "rss_data"
+  destination = "/app/data"
+
+# Resource configuration (free tier: shared-cpu-1x, 256MB RAM)
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+
+# No HTTP service needed (this is a background worker)
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  auto_stop_machines = false   # Keep running 24/7
+  auto_start_machines = false
+
+# Health check disabled (no web service)

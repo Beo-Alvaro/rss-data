@@ -1,0 +1,64 @@
+name: Fetch RSS Feed
+
+on:
+  # Run every 5 minutes
+  schedule:
+    - cron: '*/5 * * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+  
+  # Run on push to test
+  push:
+    branches: [ master ]
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write  # Allow pushing changes back to repo
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Create data directory
+      run: mkdir -p data
+    
+    - name: Run RSS fetcher
+      run: |
+        python scripts/rss_fetcher.py --once --debug
+      
+    - name: Check for changes
+      id: check_changes
+      run: |
+        if git diff --quiet data/; then
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit and push if changed
+      if: steps.check_changes.outputs.has_changes == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add data/
+        git commit -m "Auto-fetch RSS feed - $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload data as artifact (optional)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rss-data-${{ github.run_number }}
+        path: data/
+        retention-days: 7
